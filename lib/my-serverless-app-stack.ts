@@ -20,7 +20,7 @@ export class MyServerlessAppStack extends cdk.Stack {
   // Create Lambda function
   const createNoteFunction = new lambda.Function(this, 'createNoteFunction', {
     runtime: lambda.Runtime.NODEJS_18_X,
-    code: lambda.Code.fromInline(
+    code: lambda.Code.fromInline(`
       const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
       const { DynamoDBDocumentClient, PutCommand } = require('@aws-sdk/lib-dynamodb');
 
@@ -65,7 +65,7 @@ export class MyServerlessAppStack extends cdk.Stack {
           };
         }
       };
-    ),
+    `),
     hander: 'index.handler',
     environment: {
       TABLE_NAME: table.tableName,
