@@ -66,7 +66,7 @@ export class MyServerlessAppStack extends cdk.Stack {
         }
       };
     `),
-    hander: 'index.handler',
+    handler: 'index.handler',
     environment: {
       TABLE_NAME: table.tableName,
     },
