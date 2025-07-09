@@ -73,7 +73,8 @@ export class MyServerlessAppStack extends cdk.Stack {
   });
 
   const getAllNotesFunction = new lambda.Function(this, 'GetAllNotesFunction', {
-    runtime: lambda.Code.fromInline(`
+    runtime: lambda.Runtime.NODEJS_18_X,
+    code: lambda.Code.fromInline(`
                                     const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
                                     const { DynamoDBDocumentClient, GetCommand } = require('@aws-sdk/lib-dynamodb');
                                     
