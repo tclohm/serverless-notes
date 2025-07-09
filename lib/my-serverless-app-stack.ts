@@ -72,9 +72,60 @@ export class MyServerlessAppStack extends cdk.Stack {
     },
   });
 
+  const getAllNotesFunction = new lambda.Function(this, 'GetAllNotesFunction', {
+    runtime: lambda.Code.fromInline(`
+                                    const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+                                    const { DynamoDBDocumentClient, GetCommand } = require('@aws-sdk/lib-dynamodb');
+                                    
+                                    const client = new DynamoDBClient({});
+                                    const docClient = DynamoDBDocumentClient.from(client);
+
+                                    exports.handler = async (event) => {
+                                      console.log('Received event:', JSON.stringify(event, null, 2));
+
+                                      try {
+                                        // Scan the table to get all notes
+                                        const result = await docClient.send(new ScanCommand({
+                                          TableName: process.env.TABLE_NAME
+                                        }));
+
+                                        // Sort by creation date (newest first)
+                                        const notes = result.Items ? result.Items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) : [];
+
+                                        return {
+                                          statusCode: 200,
+                                          headers: {
+                                            'Access-Control-Allow-Origin': '*',
+                                            'Content-Type': 'application/json'
+                                          },
+                                          body: JSON.stringify({
+                                            notes: notes,
+                                            count: notes.length
+                                          })
+                                        };
+                                      } catch (error) {
+                                        console.error('Error:', error);
+                                        return {
+                                          statusCode: 500,
+                                          headers: {
+                                            'Access-Control-Allow-Origin': '*',
+                                            'Content-Type': 'application/json'
+                                          },
+                                          body: JSON.stringify({ error: 'Something went wrong' })
+                                        };
+                                      }
+                                    };
+                                    `),
+                                    handler: 'index.handler',
+                                    environment: {
+                                      TABLE_NAME: table.tableName,
+                                    },
+  });
+
 
   // Grant lambda permission to write to DynamoDB
   table.grantWriteData(createNoteFunction);
+  table.grantReadData(getAllNotesFunction);
 
   // Create API Gateway
   const api = new apigateway.RestApi(this, 'NotesApi', {
@@ -90,6 +141,7 @@ export class MyServerlessAppStack extends cdk.Stack {
   // Connect API to lambda
   const notes = api.root.addResource('notes');
   notes.addMethod('POST', new apigateway.LambdaIntegration(createNoteFunction));
+  notes.addMethod('GET', new apigateway.LambdaIntegration(getAllNotesFunction));
 
   // Output the API URL so you can test it
   new cdk.CfnOutput(this, 'ApiUrl', {
